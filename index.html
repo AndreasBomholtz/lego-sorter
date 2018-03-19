@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+
+<head lang="en">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge"></meta>
+	<meta charset="utf-8"></meta>
+
+	<title>Lego Sorteer</title>
+
+	<link href="http://fonts.googleapis.com/css?family=Open+Sans:400" rel="stylesheet"></link>
+	<link href="assets/css/styles.css" rel="stylesheet"></link>
+</head>
+
+<body>
+
+	<header class="comp2act">
+	  <h1><a href="#">Lego Sorter</a></h1>
+	</header>
+
+	<div class="main-content">
+
+		<div class="all-products page">
+
+			<div class="filters">
+				<form>
+
+					<div class="filter-criteria">
+						<span>Part Color</span>
+						<label><input type="checkbox" name="Colour" value="Black">Black</label>
+						<label><input type="checkbox" name="Colour" value="samsung">Samsung</label>
+						<label><input type="checkbox" name="Colour" value="htc">HTC</label>
+						<label><input type="checkbox" name="Colour" value="nokia">Nokia</label>
+						<label><input type="checkbox" name="Colour" value="zte">ZTE</label>
+						<label><input type="checkbox" name="Colour" value="sony">Sony</label>
+					</div>
+
+					<div class="filter-criteria">
+						<span>Part Type</span>
+						<label><input type="checkbox" value="System" name="Category">System</label>
+						<label><input type="checkbox" value="Technic" name="Category">Technic</label>
+					</div>
+
+					<button>Clear filters</button>
+
+				</form>
+
+			</div>
+
+			<ul class="products-list">
+				<script id="products-template" type="x-handlebars-template">
+					{{#each this}}
+						<li data-index="{{PartID}}">
+							<a href="#" class="product-photo"><img src="{{ImageURL}}" height="130" alt="{{PartName}}"/></a>
+							<h2><a href="#"> {{PartName}} </a></h2>
+							<ul class="product-description">
+								<li><span>ID: </span>{{PartID}}</li>
+								<li><span>Color: </span>{{Colour}}</li>
+								<li><span>Type: </span>{{Category}}</li>
+                                <li><span>Sets: </span>{{sets}}</li>
+                                <li><span>Count: </span>{{total_count}}</li>
+							</ul>
+							<button>Sort</button>
+							<div class="highlight"></div>
+						</li>
+					{{/each}}
+				</script>
+			</ul>
+		</div>
+
+		<div class="single-product page">
+
+			<div class="overlay"></div>
+
+			<div class="preview-large">
+				<h3>Single product view</h3>
+				<img src=""/>
+				<p></p>
+
+				<span class="close">×</span>
+			</div>
+
+		</div>
+
+		<div class="error page">
+			<h3>Sorry, something went wrong :(</h3>
+		</div>
+
+	</div>
+
+
+	<script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+	<script src="//cdnjs.cloudflare.com/ajax/libs/handlebars.js/2.0.0/handlebars.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/PapaParse/4.3.7/papaparse.js"></script>
+	<script src="assets/js/script.js"></script>
+</body>
+</html>
