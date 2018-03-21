@@ -1,150 +1,132 @@
 $(function () {
-
-    // Globals variables
     var allSets = ["60110-1","10671-1"];
     var sets = {};
     var base = "/assets/data/";//"https://brickset.com/exportscripts/inventory/";
     var parts = {};
-var set_image_base = "https://images.brickset.com/sets/large/";
+    var set_image_base = "https://images.brickset.com/sets/large/";
 
-var index = 0;
-var set = "60110-1";
-var total_parts = 0;
-var colors = {};
-var types = {};
-var current_parts;
-var sorted_parts = 0;
+    var index = 0;
+    var set = "60110-1";
+    var total_parts = 0;
+    var colors = {}, arrColors = [];
+    var types = {};
+    var current_parts;
+    var sorted_parts = 0;
 
-    //  An array containing objects with information about the products.
-    var products = [],
-
-        // Our filters object will contain an array of values for each filter
-
-        // Example:
-        // filters = {
-        //      "manufacturer" = ["Apple","Sony"],
-        //      "storage" = [16]
-        //  }
-        filters = {};
-
-
-    //  Event handlers for frontend navigation
-
-    //  Checkbox filtering
+    var products = [];
+    var filters = {};
 
     var checkboxes = $('.all-products input[type=checkbox]');
 
-    checkboxes.click(function () {
+    function bindCheckboxes() {
+        showStatus("Binding checkboxes");
 
-        var that = $(this),
-            specName = that.attr('name');
+        checkboxes = $('.all-products input[type=checkbox]');
+        checkboxes.click(function () {
 
-        // When a checkbox is checked we need to write that in the filters object;
-        if(that.is(":checked")) {
+            var that = $(this);
+            var filterName = that.attr('name');
 
-            // If the filter for this specification isn't created yet - do it.
-            if(!(filters[specName] && filters[specName].length)){
-                filters[specName] = [];
-            }
+            filters[filterName].forEach(function(c) {
+                console.log(c);
+                console.log(filterName);
+                console.log(filters);
+                if(!colors[c].count) {
+                    var index = filters[filterName].indexOf(c);
 
-            //  Push values into the chosen filter array
-            filters[specName].push(that.val());
+                    filters[filterName].splice(index, 1);
+                }
+            });
 
-            // Change the url hash;
-            createQueryHash(filters);
-
-        }
-
-        // When a checkbox is unchecked we need to remove its value from the filters object.
-        if(!that.is(":checked")) {
-
-            if(filters[specName] && filters[specName].length && (filters[specName].indexOf(that.val()) != -1)){
-
-                // Find the checkbox value in the corresponding array inside the filters object.
-                var index = filters[specName].indexOf(that.val());
-
-                // Remove it.
-                filters[specName].splice(index, 1);
-
-                // If it was the last remaining value for this specification,
-                // delete the whole array.
-                if(!filters[specName].length){
-                    delete filters[specName];
+            if(that.is(":checked")) {
+                if(!(filters[filterName] && filters[filterName].length)){
+                    filters[filterName] = [];
                 }
 
+                filters[filterName].push(that.val());
+
+                createQueryHash(filters);
             }
 
-            // Change the url hash;
-            createQueryHash(filters);
-        }
-    });
+            if(!that.is(":checked")) {
+                if(filters[filterName] && filters[filterName].length && (filters[filterName].indexOf(that.val()) != -1)){
+                    var index = filters[filterName].indexOf(that.val());
 
-    // When the "Clear all filters" button is pressed change the hash to '#' (go to the home page)
+                    filters[filterName].splice(index, 1);
+
+                    if(!filters[filterName].length){
+                        delete filters[filterName];
+                    }
+                }
+                createQueryHash(filters);
+            }
+        });
+    }
+
     $('.filters button').click(function (e) {
         e.preventDefault();
         window.location.hash = '#';
     });
 
-
-    // Single product page buttons
-
     var singleProductPage = $('.single-product');
 
     singleProductPage.on('click', function (e) {
-
         if (singleProductPage.hasClass('visible')) {
-
             var clicked = $(e.target);
-
-            // If the close button or the background are clicked go to the previous page.
             if (clicked.hasClass('close') || clicked.hasClass('overlay')) {
-                // Change the url hash with the last used filters.
                 createQueryHash(filters);
             }
-
         }
-
     });
 
+    function run(data, func, done, arg) {
+        var busy = false;
+        var i=0;
+        var proc = setInterval(function() {
+            if(!busy) {
+                busy = true;
+                func(data[i], arg);
 
-    // These are called on page load
-
-    function sort() {
-        //var sets = JSON.parse(localStorage.getItem("sets"));
-        for(var set in sets) {
-            if (sets.hasOwnProperty(set)) {
-                console.log(set);
-                for(var partID in sets[set].parts) {
-                    if (sets[set].parts.hasOwnProperty(partID)) {
-                        var part = sets[set].parts[partID];
-                        if(part.Category === undefined) {
-                            continue;
-                        }
-
-                        if(!colors[part.Colour]) {
-                            colors[part.Colour] = [];
-                        }
-                        if(!types[part.Category]) {
-                            types[part.Category] = [];
-                        }
-                        part.current_count = part.Quantity;
-
-                        if(!parts[part.PartID]) {
-                            part.sets = [set];
-                            parts[part.PartID] = part;
-                            colors[part.Colour].push(part.PartID);
-                            types[part.Category].push(part.PartID);
-                            parts[part.PartID].total_count = part.Quantity;
-                        } else {
-                            parts[part.PartID].sets.push(set);
-                            parts[part.PartID].total_count += part.Quantity;
-                        }
-
-                        total_parts += part.Quantity;
-                    }
+                if(++i == data.length) {
+                    clearInterval(proc);
+                    done();
                 }
+                busy = false;
             }
+        }, 1);
+    }
+
+    function sort_parts(part, set) {
+        if(part.Category === undefined) {
+            return;
         }
+
+        if(!colors[part.Colour]) {
+            colors[part.Colour] = {
+                name: part.Colour,
+                count: 0,
+                parts: []
+            };
+        }
+        if(!types[part.Category]) {
+            types[part.Category] = [];
+        }
+        part.current_count = part.Quantity;
+
+        colors[part.Colour].parts.push(part.PartID);
+        colors[part.Colour].count += part.Quantity;
+
+        if(!parts[part.PartID]) {
+            part.sets = [set.id];
+            parts[part.PartID] = part;
+            types[part.Category].push(part.PartID);
+            parts[part.PartID].total_count = part.Quantity;
+        } else {
+            parts[part.PartID].sets.push(set.id);
+            parts[part.PartID].total_count += part.Quantity;
+        }
+
+        total_parts += part.Quantity;
     }
 
     function saveParsed(data) {
@@ -152,7 +134,10 @@ var sorted_parts = 0;
         if(sets === null) {
             sets = {};
         }
-        sets[set] = {parts: {}};
+        sets[set] = {id: set,
+                     ImageURL: set_image_base+set+".jpg",
+                     parts: {}
+                    };
         for(var i=0; i<data.data.length; i++) {
             var part = data.data[i];
             sets[set].parts[part.PartID] = part;
@@ -161,23 +146,38 @@ var sorted_parts = 0;
         //localStorage.setItem("sets", JSON.stringify(sets))
 
         if(index < allSets.length) {
-            load();
+            showStatus("Sorting parts from "+set);
+            run(data.data, sort_parts, load, sets[set]);
         } else {
-            sort();
+            showStatus("Sorting colors");
+            arrColors = Object.values(colors).sort(compare_color);
+            updateColors();
 
-            products = Object.values(parts).sort(compare);
-            // Call a function to create HTML for all the products.
-            generateAllProductsHTML(products);
+            showStatus("Rendering parts");
+            products = Object.values(parts).sort(compare_parts);
+            generateAllPartsHTML(products);
 
-            // Manually trigger a hashchange to start the app.
+
+            showStatus("Rending sets");
+            generateAllSetsHTML(sets);
+
+            showStatus("Ready");
             $(window).trigger('hashchange');
-
-            //document.getElementById("sets_count").innerHTML = allSets.length;
-            //sort();
         }
     }
 
-    function compare(a,b) {
+    function updateColors() {
+        $("#filter-color").empty();
+        arrColors.forEach(function(color) {
+            if(color.count) {
+                $("#filter-color").append('<label><input type="checkbox" name="Colour" value="'+color.name+'">'+color.name+' ('+color.parts.length+'/'+color.count+')</label>');
+            }
+        });
+
+        bindCheckboxes();
+    }
+
+    function compare_parts(a,b) {
         if (a.total_count > b.total_count)
             return -1;
         if (a.total_count < b.total_count)
@@ -185,8 +185,18 @@ var sorted_parts = 0;
         return 0;
     }
 
+    function compare_color(a,b) {
+        if (a.parts.length > b.parts.length)
+            return -1;
+        if (a.parts.length < b.parts.length)
+            return 1;
+        return 0;
+    }
+
     function load() {
         set = allSets[index++];
+
+        showStatus("Loading set "+set);
 
         Papa.parse(base+set, {
             download: true,
@@ -198,126 +208,106 @@ var sorted_parts = 0;
 
     load();
 
-    // Get data about our products from products.json.
-    /*$.getJSON( "products.json", function( data ) {
-
-        // Write the data into our global variable.
-        products = data;
-
-        // Call a function to create HTML for all the products.
-        generateAllProductsHTML(products);
-
-        // Manually trigger a hashchange to start the app.
-        $(window).trigger('hashchange');
-    });
-*/
-
-    // An event handler with calls the render function on every hashchange.
-    // The render function will show the appropriate content of out page.
     $(window).on('hashchange', function(){
         render(decodeURI(window.location.hash));
     });
 
-
-    // Navigation
-
     function render(url) {
-
-        // Get the keyword from the url.
         var temp = url.split('/')[0];
-
-        // Hide whatever page is currently shown.
         $('.main-content .page').removeClass('visible');
 
         var map = {
-            // The "Homepage".
             '': function() {
-
-                // Clear the filters object, uncheck all checkboxes, show all the products
                 filters = {};
                 checkboxes.prop('checked',false);
 
                 renderProductsPage(products);
             },
-
-            // Single Products page.
-            '#product': function() {
-
-                // Get the index of which product we want to show and call the appropriate function.
-                var index = url.split('#product/')[1].trim();
+            '#part': function() {
+                var index = url.split('#part/')[1].trim();
 
                 renderSingleProductPage(index, products);
             },
-
-            // Page with filtered products
             '#filter': function() {
-
-                // Grab the string after the '#filter/' keyword. Call the filtering function.
                 url = url.split('#filter/')[1].trim();
 
-                // Try and parse the filters object from the query string.
                 try {
                     filters = JSON.parse(url);
-                }
-                // If it isn't a valid json, go back to homepage ( the rest of the code won't be executed ).
-                catch(err) {
+                } catch(err) {
                     window.location.hash = '#';
                     return;
                 }
 
                 renderFilterResults(filters, products);
             }
-
         };
 
-        // Execute the needed function depending on the url keyword (stored in temp).
         if(map[temp]){
             map[temp]();
-        }
-        // If the keyword isn't listed in the above - render the error page.
-        else {
+        } else {
             renderErrorPage();
         }
     }
 
+    function showStatus(msg) {
+        var header = $('header').find('span').text(msg);
+    }
 
-    // This function is called only once - on page load.
-    // It fills up the products list via a handlebars template.
-    // It recieves one parameter - the data we took from products.json.
-    function generateAllProductsHTML(data){
-
+    function generateAllPartsHTML(data){
         var list = $('.all-products .products-list');
 
         var theTemplateScript = $("#products-template").html();
-        //Compile the template
+
         var theTemplate = Handlebars.compile (theTemplateScript);
         list.append (theTemplate(data));
 
-        // Each products has a data-index attribute.
-        // On click change the url hash to open up a preview for this product only.
-        // Remember: every hashchange triggers the render function.
         list.find('li').on('click', function (e) {
             e.preventDefault();
 
-            var productIndex = $(this).data('index');
+            var partIndex = $(this).data('index');
 
-            window.location.hash = 'product/' + productIndex;
+            window.location.hash = 'part/' + partIndex;
         })
     }
 
-    // This function receives an object containing all the product we want to show.
+    function generateAllSetsHTML(data) {
+        var list = $('.single-product .sets-list');
+
+        var theTemplateScript = $("#sets-template").html();
+
+        var theTemplate = Handlebars.compile (theTemplateScript);
+        list.append (theTemplate(data));
+
+        list.find('li').on('click', function (e) {
+            e.preventDefault();
+
+            var setIndex = $(this).data('index');
+            var part = window.location.hash.split('#part/')[1].trim();
+
+            parts[part].total_count--;
+
+            var htmlPart = $('.all-products .products-list > li').filter('[data-index="'+part+'"]').find("#count").text(parts[part].total_count);
+
+            var col = colors[parts[part].Colour];
+            col.count--;
+            if(!parts[part].total_count) {
+                var index = col.parts.indexOf(part);
+                col.parts.splice(index, 1);
+            }
+
+            updateColors();
+
+            window.history.back();
+        })
+    }
+
     function renderProductsPage(data){
+        var page = $('.all-products');
+        var allProducts = $('.all-products .products-list > li');
 
-        var page = $('.all-products'),
-            allProducts = $('.all-products .products-list > li');
-
-        // Hide all the products in the products list.
         allProducts.addClass('hidden');
 
-        // Iterate over all of the products.
-        // If their ID is somewhere in the data object remove the hidden class to reveal them.
         allProducts.each(function () {
-
             var that = $(this);
 
             data.forEach(function (item) {
@@ -326,125 +316,76 @@ var sorted_parts = 0;
                 }
             });
         });
-
-        // Show the page itself.
-        // (the render function hides all pages so we need to show the one we want).
         page.addClass('visible');
-
     }
 
-
-    // Opens up a preview for one of the products.
-    // Its parameters are an index from the hash and the products object.
     function renderSingleProductPage(index, data){
+        var page = $('.single-product');
+        var container = $('.preview-large');
 
-        var page = $('.single-product'),
-            container = $('.preview-large');
-
-        // Find the wanted product by iterating the data object and searching for the chosen index.
         if(data.length){
             data.forEach(function (item) {
                 if(item.PartID == index){
-                    // Populate '.preview-large' with the chosen product's data.
                     container.find('h3').text(item.name);
-                    container.find('img').attr('src', item.ImageURL);
+                    //container.find('img').attr('src', item.ImageURL);
                     container.find('p').text(item.sets);
                 }
             });
         }
-
-        // Show the page.
         page.addClass('visible');
-
     }
 
-    // Find and render the filtered data results. Arguments are:
-    // filters - our global variable - the object with arrays about what we are searching for.
-    // products - an object with the full products list (from product.json).
     function renderFilterResults(filters, products){
-
-        // This array contains all the possible filter criteria.
         var criteria = ['Colour','Category'],
             results = [],
             isFiltered = false;
 
-        // Uncheck all the checkboxes.
-        // We will be checking them again one by one.
         checkboxes.prop('checked', false);
 
-
         criteria.forEach(function (c) {
-
-            // Check if each of the possible filter criteria is actually in the filters object.
             if(filters[c] && filters[c].length){
-
-
-                // After we've filtered the products once, we want to keep filtering them.
-                // That's why we make the object we search in (products) to equal the one with the results.
-                // Then the results array is cleared, so it can be filled with the newly filtered data.
                 if(isFiltered){
                     products = results;
                     results = [];
                 }
-
-
-                // In these nested 'for loops' we will iterate over the filters and the products
-                // and check if they contain the same values (the ones we are filtering by).
-
-                // Iterate over the entries inside filters.criteria (remember each criteria contains an array).
                 filters[c].forEach(function (filter) {
-
-                    // Iterate over the products.
                     products.forEach(function (item){
-
-                        // If the product has the same specification value as the one in the filter
-                        // push it inside the results array and mark the isFiltered flag true.
-
-                        if(typeof item[c] == 'number'){
-                            if(item[c] == filter){
-                                results.push(item);
-                                isFiltered = true;
+                        if(item.total_count > 0) {
+                            if(typeof item[c] == 'number'){
+                                if(item[c] == filter){
+                                    results.push(item);
+                                    isFiltered = true;
+                                }
                             }
-                        }
 
-                        if(typeof item[c] == 'string'){
-                            if(item[c].indexOf(filter) != -1){
-                                results.push(item);
-                                isFiltered = true;
+                            if(typeof item[c] == 'string'){
+                                if(item[c].indexOf(filter) != -1){
+                                    results.push(item);
+                                    isFiltered = true;
+                                }
                             }
                         }
                     });
 
-                    // Here we can make the checkboxes representing the filters true,
-                    // keeping the app up to date.
                     if(c && filter){
-                        $('input[name='+c+'][value='+filter+']').prop('checked',true);
+                        $('input[name='+c+'][value="'+filter+'"]').prop('checked',true);
                     }
                 });
             }
         });
 
-        // Call the renderProductsPage.
-        // As it's argument give the object with filtered products.
         renderProductsPage(results);
     }
 
-
-    // Shows the error page.
     function renderErrorPage(){
         var page = $('.error');
         page.addClass('visible');
     }
 
-    // Get the filters object, turn it into a string and write it into the hash.
     function createQueryHash(filters){
-        // Here we check if filters isn't empty.
         if(!$.isEmptyObject(filters)){
-            // Stringify the object via JSON.stringify and write it after the '#filter' keyword.
             window.location.hash = '#filter/' + JSON.stringify(filters);
-        }
-        else{
-            // If it's empty change the hash to '#' (the homepage).
+        } else {
             window.location.hash = '#';
         }
     }
