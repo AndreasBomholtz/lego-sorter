@@ -155,7 +155,7 @@ header {
 	pointer-events: auto;
 }
 
-.products-list > li{
+.products-list > li, .sets-list > li{
 	box-sizing:border-box;
 	display: inline-block;
 	cursor: pointer;
@@ -174,7 +174,7 @@ header {
 	padding: 25px;
 }
 
-.products-list > li.hidden{
+.products-list > li.hidden, .sets-list > li.hidden{
 	opacity: 0.2;
 	pointer-events: none;
     visibility: hidden;

@@ -1,0 +1,11 @@
+--2018-03-22 13:52:01--  https://brickset.com/exportscripts/inventory/SetID-1
+Resolving brickset.com (brickset.com)... 104.25.204.7, 104.25.205.7, 2400:cb00:2048:1::6819:cc07, ...
+Connecting to brickset.com (brickset.com)|104.25.204.7|:443... connected.
+HTTP request sent, awaiting response... 200 OK
+Length: 87 [CSV]
+Saving to: ‘SetID-1.1’
+
+     0K                                                       100% 16.3M=0s
+
+2018-03-22 13:52:01 (16.3 MB/s) - ‘SetID-1.1’ saved [87/87]
+
