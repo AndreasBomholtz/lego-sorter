@@ -15,68 +15,119 @@ $(function () {
     var types = {};
     var current_parts;
     var sorted_parts = 0;
+    try {
+        var sorted_parts = JSON.parse(localStorage.getItem("sorted"));
+    } catch (e) {
+        sorted_parts = null;
+    }
+    if(sorted_parts === null) {
+        sorted_parts = {};
+    }
+    var current_part;
+    console.log(sorted_parts);
 
     var products = [];
     var filters = {};
 
-    var checkboxes = $('.all-products input[type=checkbox]');
+    var main = {
+        status: "Starting",
+        show_parts: false,
+        show_sets: false,
+        colors: [],
+        parts: [],
+        sets: []
+    };
 
-    function bindCheckboxes() {
-        checkboxes = $('.all-products input[type=checkbox]');
-        checkboxes.click(function () {
-
-            var that = $(this);
-            var filterName = that.attr('name');
-
-            if(filters[filterName]) {
-                filters[filterName].forEach(function(c) {
-                    if(!colors[c].count) {
-                        var index = filters[filterName].indexOf(c);
-                        filters[filterName].splice(index, 1);
-                    }
-                });
-            }
-
-            if(that.is(":checked")) {
-                if(!(filters[filterName] && filters[filterName].length)){
-                    filters[filterName] = [];
-                }
-
-                filters[filterName].push(that.val());
-
-                createQueryHash(filters);
-            }
-
-            if(!that.is(":checked")) {
-                if(filters[filterName] && filters[filterName].length && (filters[filterName].indexOf(that.val()) != -1)){
-                    var index = filters[filterName].indexOf(that.val());
-
-                    filters[filterName].splice(index, 1);
-
-                    if(!filters[filterName].length){
-                        delete filters[filterName];
-                    }
-                }
-                createQueryHash(filters);
-            }
-        });
+    rivets.formatters.color = function(color) {
+        return color.name+' ('+color.parts.length+'/'+color.count+')';
     }
-
-    $('.filters button').click(function (e) {
-        e.preventDefault();
-        window.location.hash = '#';
-    });
-
-    var singleProductPage = $('.single-product');
-
-    singleProductPage.on('click', function (e) {
-        if (singleProductPage.hasClass('visible')) {
-            var clicked = $(e.target);
-            if (clicked.hasClass('close') || clicked.hasClass('overlay')) {
-                createQueryHash(filters);
+    rivets.formatters.length = function(value) {
+        return value.length ? value.length : 0;
+    }
+    rivets.formatters.parts = function(parts) {
+        var total = 0;
+        for(var part in parts) {
+            if(parts[part].Quantity) {
+                total += parts[part].Quantity;
             }
         }
-    });
+        return total;
+    }
+
+    var controller = {
+        onPartClick: function(e, model) {
+            current_part = model.part;
+
+            for(var set in sets) {
+                if(sets[set].parts[model.part.PartID]) {
+                    sets[set].part_count = sets[set].parts[model.part.PartID].current_count;
+                }
+            }
+
+            renderFilterSets(current_part.PartID, arrSets);
+        },
+        onColorClick: function(e, model) {
+            var filterName = 'Colour';
+            var filter = model.color.name;
+
+            if(!(filters[filterName] && filters[filterName].length)){
+                filters[filterName] = [];
+            }
+
+            if(filters[filterName].includes(filter)) {
+                var index = filters[filterName].indexOf(filter);
+
+                filters[filterName].splice(index, 1);
+
+                if(!filters[filterName].length){
+                    delete filters[filterName];
+                }
+            } else {
+                filters[filterName].push(filter);
+            }
+            renderFilterResults(filters, products);
+        },
+        onPartSort: function(e, model) {
+            var set = model.set;
+            var set_id = set.id;
+            var part = current_part.PartID;
+
+            sort_part(set, part);
+
+            if(!sorted_parts[set_id]) {
+                sorted_parts[set_id] = {};
+            }
+            if(!sorted_parts[set_id][part]) {
+                sorted_parts[set_id][part] = 0;
+            }
+            sorted_parts[set_id][part]++;
+            localStorage.setItem("sorted", JSON.stringify(sorted_parts));
+
+            renderFilterResults(filters, products);
+        },
+        onClearSorted: function(e, model) {
+            localStorage.setItem("sorted", null);
+            sorted_parts = {};
+        }
+    };
+    rivets.bind( document, { data: main, controller: controller});
+
+    function sort_part(set, part) {
+        if(typeof(set) == "string") {
+            set = sets[set];
+        }
+        parts[part].total_count--;
+        set.parts[part].current_count--;
+        set.sorted++;
+        set.precent = ((set.sorted * 100) / set.total).toFixed(2)+'%';
+
+        var col = colors[parts[part].Colour];
+        col.count--;
+        if(!parts[part].total_count) {
+            var index = col.parts.indexOf(part);
+            col.parts.splice(index, 1);
+        }
+    }
 
     function run(data, func, done, arg) {
         var busy = false;
@@ -133,13 +184,22 @@ $(function () {
         if(sets === null) {
             sets = {};
         }
-        sets[set] = {id: set,
-                     ImageURL: set_image_base+set+".jpg",
-                     parts: {}
-                    };
+        sets[set] = {
+            id: set,
+            ImageURL: set_image_base+set+".jpg",
+            sorted: 0,
+            part_count: 0,
+            total: 0,
+            precent: '0%',
+            parts: {}
+        };
         for(var i=0; i<data.data.length; i++) {
             var part = data.data[i];
-            sets[set].parts[part.PartID] = part;
+            if(part.PartID) {
+                part.link = "part/"+part.PartID;
+                sets[set].parts[part.PartID] = part;
+                sets[set].total += part.Quantity;
+            }
         }
 
         //localStorage.setItem("sets", JSON.stringify(sets))
@@ -151,33 +211,27 @@ $(function () {
             run(data.data, sort_parts, function() {
                 arrSets = Object.values(sets);
 
+                for(var set in sorted_parts) {
+                    var s_set = sorted_parts[set];
+                    for(var part in s_set) {
+                        sort_part(set, part);
+                    }
+                }
+
                 showStatus("Sorting colors");
                 arrColors = Object.values(colors).sort(compare_color);
-                updateColors();
 
                 showStatus("Rendering parts");
                 products = Object.values(parts).sort(compare_parts);
-                generateAllPartsHTML(products);
 
-
-                showStatus("Rending sets");
-                generateAllSetsHTML(sets);
+                main.colors =  arrColors;
+                main.parts = products;
+                main.sets = arrSets;
 
                 showStatus("Ready");
-                $(window).trigger('hashchange');
+                renderProductsPage();
             } , sets[set]);
         }
-    }
-
-    function updateColors() {
-        $("#filter-color").empty();
-        arrColors.forEach(function(color) {
-            if(color.count) {
-                $("#filter-color").append('<label><input type="checkbox" name="Colour" value="'+color.name+'">'+color.name+' ('+color.parts.length+'/'+color.count+')</label>');
-            }
-        });
-
-        bindCheckboxes();
     }
 
     function compare_parts(a,b) {
@@ -208,224 +262,80 @@ $(function () {
             complete: saveParsed
         });
     }
-
     load();
 
-    $(window).on('hashchange', function(){
-        render(decodeURI(window.location.hash));
-    });
-
-    function render(url) {
-        var temp = url.split('/')[0];
-        $('.main-content .page').removeClass('visible');
-
-        var map = {
-            '': function() {
-                filters = {};
-                checkboxes.prop('checked',false);
-
-                renderProductsPage(products);
-            },
-            '#part': function() {
-                var part = url.split('#part/')[1].trim();
-
-                renderFilterSets(part, arrSets);
-            },
-            '#filter': function() {
-                url = url.split('#filter/')[1].trim();
-
-                try {
-                    filters = JSON.parse(url);
-                } catch(err) {
-                    window.location.hash = '#';
-                    return;
-                }
-
-                renderFilterResults(filters, products);
-            }
-        };
-
-        if(map[temp]){
-            map[temp]();
-        } else {
-            renderErrorPage();
-        }
-    }
-
     function showStatus(msg) {
-        var header = $('header').find('span').text(msg);
+        main.status = msg;
     }
 
-    function generateAllPartsHTML(data){
-        var list = $('.all-products .products-list');
-
-        var theTemplateScript = $("#products-template").html();
-
-        var theTemplate = Handlebars.compile (theTemplateScript);
-        list.append (theTemplate(data));
-
-        list.find('li').on('click', function (e) {
-            e.preventDefault();
-
-            var partIndex = $(this).data('index');
-
-            window.location.hash = 'part/' + partIndex;
-        })
+    function renderProductsPage() {
+        main.show_parts = true;
+        main.show_sets = false;
     }
 
-    function generateAllSetsHTML(data) {
-        var list = $('.single-product .sets-list');
-
-        var theTemplateScript = $("#sets-template").html();
-
-        var theTemplate = Handlebars.compile (theTemplateScript);
-        list.append (theTemplate(data));
-
-        list.find('li').on('click', function (e) {
-            e.preventDefault();
-
-            var set = $(this).data('index');
-            var part = window.location.hash.split('#part/')[1].trim();
-
-            parts[part].total_count--;
-            sets[set].parts[part].current_count--;
-
-            var htmlPart = $('.all-products .products-list > li').filter('[data-index="'+part+'"]').find("#count").text(parts[part].total_count);
-
-            var col = colors[parts[part].Colour];
-            col.count--;
-            if(!parts[part].total_count) {
-                var index = col.parts.indexOf(part);
-                col.parts.splice(index, 1);
-            }
-
-            updateColors();
-
-            window.history.back();
-        })
+    function renderSetsPage() {
+        main.show_parts = false;
+        main.show_sets = true;
     }
 
-    function renderProductsPage(data){
-        var page = $('.all-products');
-        var allProducts = $('.all-products .products-list > li');
-
-        allProducts.addClass('hidden');
-
-        allProducts.each(function () {
-            var that = $(this);
-
-            data.forEach(function (item) {
-                if(that.data('index') == item.PartID){
-                    that.removeClass('hidden');
-                }
+    function renderFilterResults(filters, products) {
+        if(Object.keys(filters).length === 0 && filters.constructor === Object) {
+            products.forEach(function (item){
+                item.disabled = false;
             });
-        });
-        page.addClass('visible');
-    }
-
-    function renderSetsPage(data){
-        var page = $('.single-product');
-
-        var allSets = $('.single-product .sets-list > li');
-
-        allSets.addClass('hidden');
-
-        allSets.each(function () {
-            var that = $(this);
-
-            data.forEach(function (item) {
-                if(that.data('index') == item.id) {
-                    that.removeClass('hidden');
-                }
-            });
-        });
-        /*
-         var container = $('.preview-large');
-
-         if(data.length){
-         data.forEach(function (item) {
-         if(item.PartID == index){
-         container.find('h3').text(item.name);
-         //container.find('img').attr('src', item.ImageURL);
-         container.find('p').text(item.sets);
-         }
-         });
-         }
-         */
-        page.addClass('visible');
-    }
-
-    function renderFilterResults(filters, products){
+            return;
+        }
         var criteria = ['Colour','Category'];
         var results = [];
         var isFiltered = false;
 
-        checkboxes.prop('checked', false);
+        products.forEach(function (item){
+            item.disabled = true;
+        });
 
         criteria.forEach(function (c) {
             if(filters[c] && filters[c].length){
-                if(isFiltered){
-                    products = results;
-                    results = [];
-                }
                 filters[c].forEach(function (filter) {
                     products.forEach(function (item){
                         if(item.total_count > 0) {
                             if(typeof item[c] == 'number'){
                                 if(item[c] == filter){
-                                    results.push(item);
-                                    isFiltered = true;
+                                    item.disabled = false;
                                 }
                             }
 
                             if(typeof item[c] == 'string'){
                                 if(item[c].indexOf(filter) != -1){
-                                    results.push(item);
-                                    isFiltered = true;
+                                    item.disabled = false;
                                 }
                             }
                         }
                     });
-
-                    if(c && filter){
-                        $('input[name='+c+'][value="'+filter+'"]').prop('checked',true);
-                    }
                 });
             }
         });
 
-        renderProductsPage(results);
+        renderProductsPage();
     }
 
     function renderFilterSets(part, sets) {
         var criteria = ['id'];
-        var results = [];
         var filters = parts[part].sets;
+
+        sets.forEach(function (item) {
+            item.disabled = true;
+        });
 
         filters.forEach(function (filter) {
             sets.forEach(function (item) {
                 if(item.id == filter) {
                     if(item.parts[part].current_count) {
-                        results.push(item);
+                        item.disabled = false;
                     }
                 }
             });
         });
 
-        renderSetsPage(results);
+        renderSetsPage();
     }
-
-    function renderErrorPage(){
-        var page = $('.error');
-        page.addClass('visible');
-    }
-
-    function createQueryHash(filters){
-        if(!$.isEmptyObject(filters)){
-            window.location.hash = '#filter/' + JSON.stringify(filters);
-        } else {
-            window.location.hash = '#';
-        }
-    }
-
 });

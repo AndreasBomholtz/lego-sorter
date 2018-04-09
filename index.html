@@ -9,90 +9,73 @@
 
     <link href="http://fonts.googleapis.com/css?family=Open+Sans:400" rel="stylesheet"></link>
     <link href="assets/css/styles.css" rel="stylesheet"></link>
+
+    <script src="assets/js/rivets.bundled.min.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/PapaParse/4.3.7/papaparse.js"></script>
+    <script src="assets/js/script.js"></script>
   </head>
 
   <body>
 
     <header>
-      <h1>Lego Sorter - <span>Starting</span></h1>
+      <h1>Lego Sorter - <var rv-text="data.status">Starting</var></h1>
+      <button type="button" rv-on-click="controller.onClearSorted">Clear Sorted</button>
     </header>
 
     <div class="main-content">
 
-      <div class="all-products page">
+      <div class="all-products page visible" rv-show="data.show_parts">
 
         <div class="filters">
+          <span>Part Color</span>
           <form>
-
-            <span>Part Color</span>
-            <div class="filter-criteria" id="filter-color">
-            </div>
-
             <div class="filter-criteria">
-              <span>Part Type</span>
-              <label><input type="checkbox" value="System" name="Category">System</label>
-              <label><input type="checkbox" value="Technic" name="Category">Technic</label>
+              <label rv-each-color="data.colors" rv-show="color.count">
+                <input type="checkbox" name="Colour" rv-value="color.name" rv-on-click="controller.onColorClick" />
+                <var rv-text="color < color.parts color.count | color"></var>
+              </label>
             </div>
-
-            <button>Clear filters</button>
-
           </form>
-
         </div>
 
         <ul class="products-list">
-          <script id="products-template" type="x-handlebars-template">
-            {{#each this}}
-            <li data-index="{{PartID}}">
-              <a href="#" class="product-photo"><img src="{{ImageURL}}" height="130" alt="{{PartName}}"/></a>
-              <h2><a href="#"> {{PartName}} </a></h2>
-              <ul class="product-description">
-                <li><span>ID: </span>{{PartID}}</li>
-                <li><span>Color: </span>{{Colour}}</li>
-                <li><span>Type: </span>{{Category}}</li>
-                <li><span>Sets: </span>{{sets.length}}</li>
-                <li><span>Count: </span><span id="count">{{total_count}}</span></li>
-              </ul>
-              <div class="highlight"></div>
-            </li>
-            {{/each}}
-          </script>
+          <li rv-each-part="data.parts" rv-hide="part.disabled" rv-hide="part.total_count" rv-on-click="controller.onPartClick">
+            <a rv-href="part.link" class="product-photo"><img rv-src="part.ImageURL" height="130" rv-alt="part.PartName"/></a>
+            <h2><a rv-href="part.link" rv-text="part.PartName"></a></h2>
+            <ul class="product-description">
+              <li><span>ID: </span><var rv-text="part.PartID"></var></li>
+              <li><span>Color: </span><var rv-text="part.Colour"></var></li>
+              <li><span>Type: </span><var rv-text="part.Category"></var></li>
+              <li><span>Sets: </span><var rv-text="part.sets | length"></var></li>
+              <li><span>Count: </span><var rv-text="part.total_count"></var></li>
+            </ul>
+            <div class="highlight"></div>
+          </li>
         </ul>
       </div>
 
-      <div class="single-product page">
 
-        <div class="overlay"></div>
+      <div class="all-products page visible" rv-show="data.show_sets">
 
-        <div class="preview-large">
-          <h3>Sort a part</h3>
-          <img src=""/>
-          <p></p>
+        <ul class="products-list">
+          <li rv-each-set="data.sets" rv-hide="set.disabled" rv-on-click="controller.onPartSort">
+            <a class="product-photo"><img rv-src="set.ImageURL" height="130" rv-alt="set.id"/></a>
+            <h2 rv-text="set.SetName"></a></h2>
+            <ul class="product-description">
+              <li><span>ID: </span><var rv-text="set.id"></var></li>
+              <li><span>Count: </span><var rv-text="set.part_count"></var></li>
+              <li><span>Parts: </span><var rv-text="set.total"></var></li>
+              <li><span>Sorted: </span><var rv-text="set.sorted"></var></li>
+              <li><span>Procent: </span><var rv-text="set.precent"></var></li>
+            </ul>
+            <div class="highlight"></div>
+          </li>
+        </ul>
 
-          <ul class="sets-list">
-            <script id="sets-template" type="x-handlebars-template">
-              {{#each this}}
-              <li data-index="{{id}}">
-                <img src="{{ImageURL}}" height="130" alt="{{id}}" />
-              </li>
-              {{/each}}
-            </script>
-          </ul>
-          <span class="close">×</span>
-        </div>
-
-      </div>
-
-      <div class="error page">
-        <h3>Sorry, something went wrong :(</h3>
       </div>
 
     </div>
 
-
-    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/handlebars.js/2.0.0/handlebars.min.js"></script>
-    <script src="//cdnjs.cloudflare.com/ajax/libs/PapaParse/4.3.7/papaparse.js"></script>
-    <script src="assets/js/script.js"></script>
   </body>
 </html>
