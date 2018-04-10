@@ -75,13 +75,7 @@ $(function () {
             }
 
             if(filters[filterName].includes(filter)) {
-                var index = filters[filterName].indexOf(filter);
-
-                filters[filterName].splice(index, 1);
-
-                if(!filters[filterName].length){
-                    delete filters[filterName];
-                }
+                clear_filter(filterName, filter);
             } else {
                 filters[filterName].push(filter);
             }
@@ -112,6 +106,17 @@ $(function () {
     };
     rivets.bind( document, { data: main, controller: controller});
 
+    function clear_filter(filterName, filter) {
+        if(filters[filterName] && filters[filterName].includes(filter)) {
+            var index = filters[filterName].indexOf(filter);
+
+            filters[filterName].splice(index, 1);
+            if(!filters[filterName].length){
+                delete filters[filterName];
+            }
+        }
+    }
+
     function sort_part(set, part) {
         if(typeof(set) == "string") {
             set = sets[set];
@@ -123,6 +128,9 @@ $(function () {
 
         var col = colors[parts[part].Colour];
         col.count--;
+        if(!col.count) {
+            clear_filter('Colour', col.name);
+        }
         if(!parts[part].total_count) {
             var index = col.parts.indexOf(part);
             col.parts.splice(index, 1);
@@ -283,38 +291,37 @@ $(function () {
             products.forEach(function (item){
                 item.disabled = false;
             });
-            return;
-        }
-        var criteria = ['Colour','Category'];
-        var results = [];
-        var isFiltered = false;
+        } else {
+            var criteria = ['Colour','Category'];
+            var results = [];
+            var isFiltered = false;
 
-        products.forEach(function (item){
-            item.disabled = true;
-        });
+            products.forEach(function (item){
+                item.disabled = true;
+            });
 
-        criteria.forEach(function (c) {
-            if(filters[c] && filters[c].length){
-                filters[c].forEach(function (filter) {
-                    products.forEach(function (item){
-                        if(item.total_count > 0) {
-                            if(typeof item[c] == 'number'){
-                                if(item[c] == filter){
-                                    item.disabled = false;
+            criteria.forEach(function (c) {
+                if(filters[c] && filters[c].length){
+                    filters[c].forEach(function (filter) {
+                        products.forEach(function (item){
+                            if(item.total_count > 0) {
+                                if(typeof item[c] == 'number'){
+                                    if(item[c] == filter){
+                                        item.disabled = false;
+                                    }
+                                }
+
+                                if(typeof item[c] == 'string'){
+                                    if(item[c].indexOf(filter) != -1){
+                                        item.disabled = false;
+                                    }
                                 }
                             }
-
-                            if(typeof item[c] == 'string'){
-                                if(item[c].indexOf(filter) != -1){
-                                    item.disabled = false;
-                                }
-                            }
-                        }
+                        });
                     });
-                });
-            }
-        });
-
+                }
+            });
+        }
         renderProductsPage();
     }
 
