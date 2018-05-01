@@ -31,9 +31,21 @@ header {
 }
 
 header button{
-    position:absolute;
-    top:20px;
-    right:10px;
+    position: absolute;
+    top: 20px;
+    right: 10px;
+
+    border-radius: 2px;
+	background-color:  #87bae1;
+	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.12);
+	border: 0;
+	color: #ffffff;
+	font-weight: bold;
+	font-size: 13px;
+	cursor: pointer;
+
+	width: 95px;
+	height: 32px;
 }
 
 @media (max-width: 500px){
@@ -260,6 +272,7 @@ header button{
 
 	width: 95px;
 	height: 32px;
+    z-index: 100;
 }
 
 .products-list .product-price{

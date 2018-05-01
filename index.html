@@ -20,7 +20,7 @@
 
     <header>
       <h1>Lego Sorter - <var rv-text="data.status">Starting</var></h1>
-      <button type="button" rv-on-click="controller.onClearSorted">Clear Sorted</button>
+      <button type="button" rv-on-click="controller.onSetup" rv-text="data.setup_text"></button>
     </header>
 
     <div class="main-content">
@@ -60,22 +60,24 @@
 
         <ul class="products-list">
           <li rv-each-set="data.sets" rv-hide="set.disabled" rv-on-click="controller.onPartSort">
-            <a class="product-photo"><img rv-src="set.ImageURL" height="130" rv-alt="set.id"/></a>
+            <a class="product-photo"><img rv-src="set.ImageURL" height="130" rv-alt="set.id" /></a>
             <h2 rv-text="set.SetName"></a></h2>
             <ul class="product-description">
               <li><span>ID: </span><var rv-text="set.id"></var></li>
               <li><span>Count: </span><var rv-text="set.part_count"></var></li>
               <li><span>Parts: </span><var rv-text="set.total"></var></li>
               <li><span>Sorted: </span><var rv-text="set.sorted"></var></li>
-              <li><span>Procent: </span><var rv-text="set.precent"></var></li>
+              <li><span>Precent: </span><var rv-text="set < set.sorted | precent"></var></li>
             </ul>
-            <div class="highlight"></div>
+            <div rv-show="data.setup">
+              <button type="button" rv-on-click="controller.onClearSorted">Clear</button>
+              <button type="button" rv-on-click="controller.onAllSorted">Sort All</button>
+            </div>
+            <div class="highlight" rv-hide="data.setup"></div>
           </li>
         </ul>
 
       </div>
-
     </div>
-
   </body>
 </html>
